@@ -6,13 +6,13 @@ import plotly.express as px  # interactive charts
 import streamlit as st  # 🎈 data web app development
 
 st.set_page_config(
-    page_title="Massagem sem Mãozinha",
+    page_title="Real-Time Data Science Dashboard",
     page_icon="✅",
     layout="wide",
 )
 
 # read csv from a github repo
-dataset_url = "data/data_0.csv"
+dataset_url = "https://raw.githubusercontent.com/Lexie88rus/bank-marketing-analysis/master/bank.csv"
 
 # read csv from a URL
 @st.experimental_memo
@@ -22,7 +22,7 @@ def get_data() -> pd.DataFrame:
 df = get_data()
 
 # dashboard title
-st.title("Massagem sem Mãozinha")
+st.title("Real-Time / Live Data Science Dashboard")
 
 # top-level filters
 job_filter = st.selectbox("Select the Job", pd.unique(df["job"]))
@@ -56,46 +56,36 @@ for seconds in range(200):
 
         # fill in those three columns with respective metrics or KPIs
         kpi1.metric(
-            label="Velz",
+            label="Age ⏳",
             value=round(avg_age),
             delta=round(avg_age) - 10,
         )
         
         kpi2.metric(
-            label="Dist",
+            label="Married Count 💍",
             value=int(count_married),
             delta=-10 + count_married,
         )
         
         kpi3.metric(
-            label="Peso",
+            label="A/C Balance ＄",
             value=f"$ {round(balance,2)} ",
             delta=-round(balance / count_married) * 100,
         )
 
         # create two columns for charts
-        fig_col1, fig_col2, fig_col3 = st.columns(3)
-
+        fig_col1, fig_col2 = st.columns(2)
         with fig_col1:
-            st.markdown("### Dist")
-            fig1 = px.line(
-                data_frame=df, y="velz", x="timestamp"
+            st.markdown("### First Chart")
+            fig = px.density_heatmap(
+                data_frame=df, y="age_new", x="marital"
             )
-            st.write(fig1)
+            st.write(fig)
             
         with fig_col2:
-            st.markdown("### Velz")
-            fig2 = px.line(
-                data_frame=df, y="velz", x="timestamp"
-            )
+            st.markdown("### Second Chart")
+            fig2 = px.histogram(data_frame=df, x="age_new")
             st.write(fig2)
-
-        with fig_col3:
-            st.markdown("### Peso")
-            fig3 = px.line(
-                data_frame=df, y="velz", x="timestamp"
-            )
-            st.write(fig3)
 
         st.markdown("### Detailed Data View")
         st.dataframe(df)
