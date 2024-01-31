@@ -5,98 +5,89 @@ import pandas as pd  # read csv, df manipulation
 import plotly.express as px  # interactive charts
 import streamlit as st  # 🎈 data web app development
 
+import pickle
+import sklearn
+
+THRESHOLD = 50
+
 st.set_page_config(
     page_title="Massagem sem Mãozinha",
-    page_icon="✅",
-    layout="wide",
+    page_icon="❤️",
 )
 
+modelo = pickle.load(open('model/modelo_logistico.pkl', 'rb'))
+
 # read csv from a github repo
-dataset_url = "data/data_0.csv"
+dataset_url = "data/inference.csv"
 
-# read csv from a URL
-@st.experimental_memo
-def get_data() -> pd.DataFrame:
-    return pd.read_csv(dataset_url)
-
-df = get_data()
-
-# dashboard title
-st.title("Massagem sem Mãozinha")
-
-# top-level filters
-job_filter = st.selectbox("Select the Job", pd.unique(df["job"]))
 
 # creating a single-element container
 placeholder = st.empty()
 
-# dataframe filter
-df = df[df["job"] == job_filter]
+def infer_model(df):
+
+  threshold = 50
+  colunas_a_normalizar = ['peso', 'velz', 'dist']
+  df[colunas_a_normalizar] =df[colunas_a_normalizar].astype(float)
+
+  # Substitua valores acima do threshold por NaN usando np.where
+  df['peso'] = df['peso'].apply(lambda x: np.where(np.abs(x) > threshold, np.nan, x))
+  df['peso'].interpolate(inplace = True)
+
+  colunas_a_normalizar = ['peso', 'velz', 'dist']
+  subsequencia = df[colunas_a_normalizar].iloc[:].values.flatten()
+
+  # Faça previsões nos dados de teste
+  previsoes = modelo.predict(subsequencia.reshape(1, -1))
+
+  return  np.argmax(np.bincount(previsoes.astype(int)))
+
 
 # near real-time / live feed simulation
-for seconds in range(200):
-
-    df["age_new"] = df["age"] * np.random.choice(range(1, 5))
-    df["balance_new"] = df["balance"] * np.random.choice(range(1, 5))
-
-    # creating KPIs
-    avg_age = np.mean(df["age_new"])
-
-    count_married = int(
-        df[(df["marital"] == "married")]["marital"].count()
-        + np.random.choice(range(1, 30))
-    )
-
-    balance = np.mean(df["balance_new"])
+while True:
 
     with placeholder.container():
 
-        # create three columns
-        kpi1, kpi2, kpi3 = st.columns(3)
-
-        # fill in those three columns with respective metrics or KPIs
-        kpi1.metric(
-            label="Velz",
-            value=round(avg_age),
-            delta=round(avg_age) - 10,
-        )
+        df = pd.read_csv(dataset_url)
         
-        kpi2.metric(
-            label="Dist",
-            value=int(count_married),
-            delta=-10 + count_married,
-        )
-        
-        kpi3.metric(
-            label="Peso",
-            value=f"$ {round(balance,2)} ",
-            delta=-round(balance / count_married) * 100,
-        )
+        to_infer = df.tail(10)
 
-        # create two columns for charts
-        fig_col1, fig_col2, fig_col3 = st.columns(3)
+        msg = infer_model(to_infer)
 
-        with fig_col1:
-            st.markdown("### Dist")
+        msg = "MASSAGEM RUIM!" if msg == 0 else "MASSAGEM BOA!"
+        # dashboard title
+        st.title(f"{msg}")
+        st.markdown("Massagem sem Mãozinha")
+
+        # create a container for each chart
+        fig_container1 = st.container()
+        fig_container2 = st.container()
+        fig_container3 = st.container()
+
+        with fig_container1:
+            st.markdown("### Velz")
             fig1 = px.line(
                 data_frame=df, y="velz", x="timestamp"
             )
             st.write(fig1)
-            
-        with fig_col2:
-            st.markdown("### Velz")
+
+    
+        with fig_container2:
+            st.markdown("### Dist")
             fig2 = px.line(
-                data_frame=df, y="velz", x="timestamp"
+                data_frame=df, y="dist", x="timestamp"
             )
             st.write(fig2)
 
-        with fig_col3:
+
+        with fig_container3:
             st.markdown("### Peso")
             fig3 = px.line(
-                data_frame=df, y="velz", x="timestamp"
+                data_frame=df, y="peso", x="timestamp"
             )
             st.write(fig3)
 
-        st.markdown("### Detailed Data View")
-        st.dataframe(df)
+
+        st.markdown("### Inference Data")
+        st.dataframe(to_infer)
         time.sleep(1)

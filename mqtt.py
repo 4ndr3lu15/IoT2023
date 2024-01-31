@@ -47,7 +47,7 @@ def on_message(client, userdata, msg):
         # Append row to the DataFrame
         new_row_df = pd.DataFrame([new_row])
         df = pd.concat([df, new_row_df])
-        df.to_csv('data/data_0.csv')
+        df.to_csv('data/inference.csv', index=False)
         # Reset new_row
         new_row = {'timestamp': timestamp, 'peso': None, 'velz': None, 'dist': None}
 
